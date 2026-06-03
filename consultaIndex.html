@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Ventas — ITEM / QD</title>
+    <style>
+        /* ── Reset & Base ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f4f8;
+            color: #1a2533;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            background: #007cbf;
+            color: #fff;
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.2);
+        }
+        header svg { flex-shrink: 0; }
+        header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: .3px; }
+        header span { font-size: .85rem; opacity: .8; margin-top: 2px; display: block; }
+
+        /* ── Main container ── */
+        main { max-width: 1100px; margin: 32px auto; padding: 0 20px 60px; }
+
+        /* ── Card ── */
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.1);
+            padding: 28px 32px;
+            margin-bottom: 28px;
+        }
+
+        /* ── Form ── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto auto;
+            gap: 16px;
+            align-items: end;
+        }
+        @media (max-width: 700px) {
+            .form-grid { grid-template-columns: 1fr 1fr; }
+            .form-grid .btn-consultar { grid-column: span 2; }
+        }
+
+        .field label {
+            display: block;
+            font-size: .78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #5a6a7a;
+            margin-bottom: 6px;
+        }
+        .field input[type="date"],
+        .field select {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1.5px solid #cdd6e0;
+            border-radius: 7px;
+            font-size: .95rem;
+            color: #1a2533;
+            background: #fff;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .field input[type="date"]:focus,
+        .field select:focus { border-color: #007cbf; }
+
+        /* Sociedad toggle */
+        .sociedad-toggle {
+            display: flex;
+            border: 1.5px solid #cdd6e0;
+            border-radius: 7px;
+            overflow: hidden;
+        }
+        .sociedad-toggle input { display: none; }
+        .sociedad-toggle label {
+            flex: 1;
+            padding: 9px 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: .95rem;
+            color: #5a6a7a;
+            background: #fff;
+            transition: background .15s, color .15s;
+            user-select: none;
+            border: none;
+        }
+        .sociedad-toggle label:first-of-type { border-right: 1.5px solid #cdd6e0; }
+        .sociedad-toggle input:checked + label {
+            background: #007cbf;
+            color: #fff;
+        }
+
+        /* Botón consultar */
+        .btn-consultar {
+            padding: 10px 28px;
+            background: #007cbf;
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            font-size: .95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .2s, transform .1s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        .btn-consultar:hover { background: #005f96; }
+        .btn-consultar:active { transform: scale(.98); }
+        .btn-consultar:disabled { background: #9bbfd6; cursor: not-allowed; }
+
+        /* Spinner */
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2.5px solid rgba(255,255,255,.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            display: none;
+        }
+        .btn-consultar.loading .spinner { display: block; }
+        .btn-consultar.loading .btn-icon { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Info banner ── */
+        .info-banner {
+            display: none;
+            background: #e8f4fb;
+            border-left: 4px solid #007cbf;
+            border-radius: 6px;
+            padding: 12px 18px;
+            font-size: .88rem;
+            color: #1a5f8a;
+            margin-bottom: 20px;
+        }
+        .info-banner.show { display: block; }
+        .info-banner strong { font-weight: 700; }
+
+        /* ── Error banner ── */
+        .error-banner {
+            display: none;
+            background: #fff0f0;
+            border-left: 4px solid #d93025;
+            border-radius: 6px;
+            padding: 12px 18px;
+            font-size: .88rem;
+            color: #9b1c1c;
+            margin-bottom: 20px;
+        }
+        .error-banner.show { display: block; }
+
+        /* ── Results section ── */
+        #results-section { display: none; }
+        #results-section.show { display: block; }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .results-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a2533;
+        }
+        .results-badge {
+            background: #e8f4fb;
+            color: #005f96;
+            border-radius: 20px;
+            padding: 3px 12px;
+            font-size: .8rem;
+            font-weight: 600;
+        }
+
+        /* ── Table ── */
+        .table-wrap { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .88rem;
+        }
+        thead th {
+            background: #007cbf;
+            color: #fff;
+            padding: 11px 14px;
+            text-align: center;
+            font-weight: 600;
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            white-space: nowrap;
+        }
+        thead th:first-child { text-align: left; border-radius: 6px 0 0 0; }
+        thead th:last-child { border-radius: 0 6px 0 0; }
+
+        tbody tr { transition: background .12s; }
+        tbody tr:nth-child(even) { background: #f5f9fd; }
+        tbody tr:hover { background: #daeef8; }
+
+        tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #e4ecf2;
+            text-align: right;
+            white-space: nowrap;
+        }
+        tbody td:first-child { text-align: left; font-weight: 500; }
+
+        /* Fila TOTAL */
+        tfoot td {
+            padding: 11px 14px;
+            background: #007cbf;
+            color: #fff;
+            font-weight: 700;
+            text-align: right;
+            white-space: nowrap;
+            font-size: .88rem;
+        }
+        tfoot td:first-child { text-align: left; border-radius: 0 0 0 6px; }
+        tfoot td:last-child { border-radius: 0 0 6px 0; }
+
+        /* ── Empty state ── */
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: #8a9bb0;
+        }
+        .empty-state svg { margin-bottom: 12px; }
+        .empty-state p { font-size: .95rem; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="7" fill="rgba(255,255,255,.15)"/>
+        <path d="M8 22 L13 15 L18 19 L23 10" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="23" cy="10" r="2" fill="#fff"/>
+    </svg>
+    <div>
+        <h1>Consulta de Ventas</h1>
+        <span>Sociedad ITEM &amp; QD — consulta por intervalo de fechas</span>
+    </div>
+</header>
+
+<main>
+
+    <!-- Formulario de consulta -->
+    <div class="card">
+        <form id="queryForm" onsubmit="ejecutarConsulta(event)">
+            <div class="form-grid">
+
+                <!-- Fecha desde -->
+                <div class="field">
+                    <label>Fecha desde</label>
+                    <input type="date" id="fDesde" required>
+                </div>
+
+                <!-- Fecha hasta -->
+                <div class="field">
+                    <label>Fecha hasta</label>
+                    <input type="date" id="fHasta" required>
+                </div>
+
+                <!-- Sociedad toggle -->
+                <div class="field">
+                    <label>Sociedad</label>
+                    <div class="sociedad-toggle">
+                        <input type="radio" name="sociedad" id="tipoITEM" value="ITEM" checked>
+                        <label for="tipoITEM">ITEM</label>
+                        <input type="radio" name="sociedad" id="tipoQD" value="QD">
+                        <label for="tipoQD">QD</label>
+                    </div>
+                </div>
+
+                <!-- Botón -->
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn-consultar" id="btnConsultar">
+                        <span class="btn-icon">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <circle cx="7" cy="7" r="4.5" stroke="white" stroke-width="1.8"/>
+                                <path d="M10.5 10.5 L13.5 13.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <div class="spinner"></div>
+                        Consultar
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <!-- Banners -->
+    <div class="info-banner" id="infoBanner"></div>
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- Resultados -->
+    <div id="results-section">
+        <div class="card">
+            <div class="results-header">
+                <span class="results-title" id="resultsTitle">Resultados</span>
+                <span class="results-badge" id="resultsBadge"></span>
+            </div>
+            <div class="table-wrap" id="tableWrap"></div>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    // ── Formato CLP ──────────────────────────────────────────────────────────
+    const clp = (n) => {
+        if (n === null || n === undefined) return '—';
+        return '$' + Number(n).toLocaleString('es-CL');
+    };
+    const num = (n) => {
+        if (n === null || n === undefined) return '—';
+        return Number(n).toLocaleString('es-CL');
+    };
+    const dec = (n, d = 2) => {
+        if (n === null || n === undefined) return '—';
+        return Number(n).toFixed(d).replace('.', ',');
+    };
+
+    // ── Helpers de fecha ─────────────────────────────────────────────────────
+    const pad = (x) => String(x).padStart(2, '0');
+    const fmtISO  = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const hoyISO  = () => fmtISO(new Date());
+    const diffDias = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+
+    // ── Fecha por defecto: 1er día del mes actual → hoy ─────────────────────
+    (function setDefaultDates() {
+        const hoy = new Date();
+        const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const inputHasta = document.getElementById('fHasta');
+        inputHasta.value = fmtISO(hoy);
+        inputHasta.max   = fmtISO(hoy);   // no permite seleccionar futuro
+        document.getElementById('fDesde').value = fmtISO(primerDia);
+    })();
+
+    // Cuando cambia "hasta", actualiza el máximo de "desde" y viceversa
+    document.getElementById('fHasta').addEventListener('change', function () {
+        // "hasta" nunca puede superar hoy
+        if (this.value > hoyISO()) {
+            this.value = hoyISO();
+            mostrarError('La fecha de fin no puede ser mayor al día de hoy.');
+        }
+    });
+    document.getElementById('fDesde').addEventListener('change', function () {
+        const hasta = document.getElementById('fHasta').value;
+        if (hasta && this.value > hasta) {
+            this.value = hasta;
+            mostrarError('La fecha de inicio no puede ser mayor a la de fin.');
+        }
+    });
+
+    // ── Mostrar / ocultar banners ────────────────────────────────────────────
+    function mostrarError(msg) {
+        const el = document.getElementById('errorBanner');
+        el.textContent = msg;
+        el.classList.add('show');
+        document.getElementById('infoBanner').classList.remove('show');
+    }
+    function mostrarInfo(html) {
+        const el = document.getElementById('infoBanner');
+        el.innerHTML = html;
+        el.classList.add('show');
+        document.getElementById('errorBanner').classList.remove('show');
+    }
+    function limpiarBanners() {
+        document.getElementById('infoBanner').classList.remove('show');
+        document.getElementById('errorBanner').classList.remove('show');
+    }
+
+    // ── Formato de fecha para display ────────────────────────────────────────
+    function fmtDisplay(iso) {
+        const [y, m, d] = iso.split('-');
+        return `${d}/${m}/${y}`;
+    }
+
+    // Los queries devuelven strings ya formateados por SQL (FORMAT/REPLACE)
+    // Solo sumamos los numéricos para los totales
+    const toNum = (v) => {
+        if (v === null || v === undefined) return 0;
+        if (typeof v === 'number') return v;
+        // quitar separadores de miles y signo $
+        return Number(String(v).replace(/[^0-9\-]/g, '')) || 0;
+    };
+
+    // ── Renderizar tabla ITEM ────────────────────────────────────────────────
+    function renderTablaITEM(data) {
+        if (!data.length) return emptyState();
+
+        let totalVenta = 0, totalOps = 0;
+        const filas = data.map(r => {
+            totalVenta += toNum(r['Total Venta']);
+            totalOps   += toNum(r['Nro. Operaciones']);
+            const local = (r.Local || '').replace('Tienda', '').trim();
+            return `<tr>
+                <td>${local}</td>
+                <td>$${r['Total Venta'] ?? ''}</td>
+                <td>${r['Nro. Operaciones'] ?? ''}</td>
+                <td>$${r['Promedio Venta'] ?? ''}</td>
+                <td>$${r['Promedio IVA'] ?? ''}</td>
+                <td>${r['Prom. Lineas por Venta'] ?? ''}</td>
+                <td>${r['Prom. Unidades por Venta'] ?? ''}</td>
+            </tr>`;
+        }).join('');
+
+        const totalFmt = '$' + totalVenta.toLocaleString('es-CL');
+        return `
+        <table>
+            <thead>
+                <tr>
+                    <th>Local</th>
+                    <th>Total Venta Neto</th>
+                    <th>Tickets</th>
+                    <th>Prom. Venta</th>
+                    <th>Prom. IVA</th>
+                    <th>Líneas / Boleta</th>
+                    <th>Unidades / Boleta</th>
+                </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+            <tfoot>
+                <tr>
+                    <td>TOTAL</td>
+                    <td>${totalFmt}</td>
+                    <td>${totalOps.toLocaleString('es-CL')}</td>
+                    <td colspan="4">&nbsp;</td>
+                </tr>
+            </tfoot>
+        </table>`;
+    }
+
+    // ── Renderizar tabla QD ──────────────────────────────────────────────────
+    function renderTablaQD(data) {
+        if (!data.length) return emptyState();
+
+        let totalVenta = 0, totalOps = 0;
+        const filas = data.map(r => {
+            totalVenta += toNum(r['Total Venta']);
+            totalOps   += toNum(r['Nro. Operaciones']);
+            const local = (r.Local || '').replace('Tienda', '').trim();
+            return `<tr>
+                <td>${local}</td>
+                <td>$${r['Total Venta'] !== undefined ? Number(r['Total Venta']).toLocaleString('es-CL') : ''}</td>
+                <td>${r['Nro. Operaciones'] ?? ''}</td>
+                <td>$${r['Promedio Venta'] !== undefined ? Number(r['Promedio Venta']).toLocaleString('es-CL') : ''}</td>
+                <td>${r['Prom. Unidades por Venta'] ?? ''}</td>
+            </tr>`;
+        }).join('');
+
+        const totalFmt = '$' + totalVenta.toLocaleString('es-CL');
+        return `
+        <table>
+            <thead>
+                <tr>
+                    <th>Local</th>
+                    <th>Total Venta Neto</th>
+                    <th>Tickets</th>
+                    <th>Prom. Venta</th>
+                    <th>Unidades / Boleta</th>
+                </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+            <tfoot>
+                <tr>
+                    <td>TOTAL</td>
+                    <td>${totalFmt}</td>
+                    <td>${totalOps.toLocaleString('es-CL')}</td>
+                    <td colspan="2">&nbsp;</td>
+                </tr>
+            </tfoot>
+        </table>`;
+    }
+
+    function emptyState() {
+        return `<div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="20" stroke="#c0cdd8" stroke-width="2"/>
+                <path d="M16 24h16M24 16v16" stroke="#c0cdd8" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p>No se encontraron registros para el período seleccionado.</p>
+        </div>`;
+    }
+
+    // ── Ejecutar consulta ────────────────────────────────────────────────────
+    async function ejecutarConsulta(e) {
+        e.preventDefault();
+        limpiarBanners();
+
+        const desde = document.getElementById('fDesde').value;
+        const hasta = document.getElementById('fHasta').value;
+        const tipo  = document.querySelector('input[name="sociedad"]:checked').value;
+
+        // Validación 1: inicio < fin
+        if (desde > hasta) {
+            mostrarError('La fecha de inicio no puede ser mayor a la de fin.');
+            return;
+        }
+        // Validación 2: fin no puede ser futuro
+        if (hasta > hoyISO()) {
+            mostrarError('La fecha de fin no puede ser mayor al día de hoy.');
+            return;
+        }
+        // Validación 3: rango máximo 31 días
+        if (diffDias(desde, hasta) > 31) {
+            mostrarError('El rango de fechas no puede superar los 31 días.');
+            return;
+        }
+
+        const btn = document.getElementById('btnConsultar');
+        btn.classList.add('loading');
+        btn.disabled = true;
+        document.getElementById('results-section').classList.remove('show');
+
+        try {
+            const url = `/api/consultar?tipo=${tipo}&desde=${desde}&hasta=${hasta}`;
+            const resp = await fetch(url);
+            const json = await resp.json();
+
+            if (!resp.ok) {
+                mostrarError(json.error || 'Error desconocido del servidor.');
+                return;
+            }
+
+            // Banner informativo
+            const label = tipo === 'ITEM' ? 'ITEM (MAC)' : 'QD (Vertical / BACK)';
+            mostrarInfo(
+                `Consultando <strong>Sociedad ${label}</strong> —
+                 del <strong>${fmtDisplay(desde)}</strong> al
+                 <strong>${fmtDisplay(hasta)}</strong> —
+                 <strong>${json.total}</strong> local(es) encontrado(s).`
+            );
+
+            // Título y badge
+            document.getElementById('resultsTitle').textContent =
+                `Ventas por Local — ${label}`;
+            document.getElementById('resultsBadge').textContent =
+                `${fmtDisplay(desde)} → ${fmtDisplay(hasta)}`;
+
+            // Tabla
+            const tableHtml = tipo === 'ITEM'
+                ? renderTablaITEM(json.data)
+                : renderTablaQD(json.data);
+
+            document.getElementById('tableWrap').innerHTML = tableHtml;
+            document.getElementById('results-section').classList.add('show');
+
+        } catch (err) {
+            mostrarError('No se pudo conectar con el servidor. Verifique que esté corriendo en puerto 6002.');
+        } finally {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>

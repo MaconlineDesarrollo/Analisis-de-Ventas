@@ -1,0 +1,16 @@
+{
+  "name": "analisis-de-ventas",
+  "version": "1.0.0",
+  "main": "appConsulta.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mssql": "^12.5.4"
+  }
+}
