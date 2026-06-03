@@ -1,0 +1,17 @@
+{
+  "name": "analisis-de-ventas",
+  "version": "1.0.0",
+  "main": "appConsulta.js",
+  "scripts": {
+    "start": "node appConsulta.js",
+    "watch": "node watch.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mssql": "^12.5.4"
+  }
+}
