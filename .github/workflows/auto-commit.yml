@@ -1,0 +1,27 @@
+name: Auto Commit cambios
+
+on:
+  push:
+    branches: [main]        # Se activa cuando haces push
+  schedule:
+    - cron: '*/30 * * * *'  # O cada 30 minutos automáticamente
+
+jobs:
+  auto-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Configurar Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Detectar cambios y hacer commit
+        run: |
+          git add .
+          git diff --staged --quiet || git commit -m "Auto-commit: cambios detectados $(date '+%Y-%m-%d %H:%M')"
+          git push
